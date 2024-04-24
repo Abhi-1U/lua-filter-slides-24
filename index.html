@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+
+    <title>Lua Filter Tutorial</title>
+
+    <link rel="stylesheet" href="dist/reset.css" />
+    <link rel="stylesheet" href="dist/reveal.css" />
+    <link rel="stylesheet" href="dist/theme/white.css" />
+    <link rel="stylesheet" href="plugin/drawer/drawer.css" />
+
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="plugin/highlight/monokai.css" />
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <!--Slide 1 : Introduction -->
+        <section>
+          <h1 class="fragment fade-up">Pandoc Lua Filters</h1>
+          <p class="fragment fade-up">Do More with pandoc</p>
+        </section>
+        <section>
+          <p class="fragment fade-up">
+            Before we get started, Lets Understand Pandoc AST
+          </p>
+        </section>
+        <!-- Slide 2 : Pandoc Elements-->
+
+        <section
+          data-background-iframe="https://pandoc.org/lua-filters.html"
+          data-background-interactive
+        >
+          <div
+            style="
+              position: absolute;
+              width: 40%;
+              right: -200px;
+              bottom: -500px;
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5),
+                0 5px 25px rgba(0, 0, 0, 0.2);
+              background-color: rgba(255, 255, 255, 0.9);
+              color: #000;
+              padding: 20px;
+              font-size: 20px;
+              text-align: left;
+            "
+          >
+            <h2>Pandoc Elements</h2>
+            <p class="fragment fade-up">
+              A reference to pandoc Element type will be essential to write
+              filters.
+            </p>
+          </div>
+        </section>
+        <!--Slide 2 : Pandoc AST-->
+        <section>
+          <section>
+            <h2 class="">A Simple Markdown Document</h2>
+            <pre>
+						<code data-trim data-line-numbers="1-5|7-13|15|18-20|23-25|26|28-36">
+							---
+							Title: A Simple Markdown Document  
+							Author:  Abhishek
+							Date: April 24 
+							---
+							
+							# H1
+							
+							## Header 2
+							
+							### H3
+							
+							#### H4
+							
+							Pandoc describes text as `Pandoc.Str()`.
+							
+							
+							::: .div
+							This will create a `Pandoc.Div()` Block
+							:::
+							
+							
+							```r
+							Code Block example
+							```
+							![Caption of the image](path/to/img){#fig:img .class1 width="100px" height="100px"}
+
+							::: {#tab:cars}
+
+							| Car Model         | Engine Type | Displacement | Power(PS) | Weight(KGs) |
+							|-------------------|-------------|--------------|-----------|-------------|
+							| Mazda RX7         | Twin Rotary | 1.3L         | 280       | 1310        |	
+							| Ferrari F40       | V-8         | 2.9L         | 478       | 1254        |
+							| Nissan Silvia S15 | Inline 4    | 2.0L         | 240       | 1300        |
+							: Table 1: Some Cars.
+							:::
+						</code>
+					</pre>
+          </section>
+          <section data-auto-animate>
+            <h2 class="">The Abstract Syntax Tree Equivalent.</h2>
+            <pre
+              data-id="code-animation"
+            ><code data-line-numbers="3-22|23-29|30-41|42-57|58|59-89|90-111|112-147|148-262">
+Pandoc
+  Meta
+    { unMeta =
+        fromList
+          [ ( "Author" , MetaInlines [ Str "Abhishek" ] )
+          , ( "Date"
+            , MetaInlines [ Str "April" , Space , Str "24" ]
+            )
+          , ( "Title"
+            , MetaInlines
+                [ Str "A"
+                , Space
+                , Str "Simple"
+                , Space
+                , Str "Markdown"
+                , Space
+                , Str "Document"
+                ]
+            )
+          ]
+    }
+  [ Header 1 ( "h1" , [] , [] ) [ Str "H1" ]
+  , Header
+      2
+      ( "header-2" , [] , [] )
+      [ Str "Header" , Space , Str "2" ]
+  , Header 3 ( "h3" , [] , [] ) [ Str "H3" ]
+  , Header 4 ( "h4" , [] , [] ) [ Str "H4" ]
+  , Para
+      [ Str "Pandoc"
+      , Space
+      , Str "describes"
+      , Space
+      , Str "text"
+      , Space
+      , Str "as"
+      , Space
+      , Code ( "" , [] , [] ) "Pandoc.Str()"
+      , Str "."
+      ]
+  , Div
+      ( "" , [ ".div" ] , [] )
+      [ Para
+          [ Str "This"
+          , Space
+          , Str "will"
+          , Space
+          , Str "create"
+          , Space
+          , Str "a"
+          , Space
+          , Code ( "" , [] , [] ) "Pandoc.Div()"
+          , Space
+          , Str "Block"
+          ]
+      ]
+  , CodeBlock ( "" , [ "r" ] , [] ) "Code Block example"
+  , Figure
+      ( "fig:img" , [] , [] )
+      (Caption
+         Nothing
+         [ Plain
+             [ Str "Caption"
+             , Space
+             , Str "of"
+             , Space
+             , Str "the"
+             , Space
+             , Str "image"
+             ]
+         ])
+      [ Plain
+          [ Image
+              ( ""
+              , [ "class1" ]
+              , [ ( "width" , "100px" ) , ( "height" , "100px" ) ]
+              )
+              [ Str "Caption"
+              , Space
+              , Str "of"
+              , Space
+              , Str "the"
+              , Space
+              , Str "image"
+              ]
+              ( "path/to/img" , "" )
+          ]
+      ]
+  , Div
+      ( "tab:cars" , [] , [] )
+      [ Table
+          ( "" , [] , [] )
+          (Caption
+             Nothing
+             [ Plain
+                 [ Str "Table"
+                 , Space
+                 , Str "1:"
+                 , Space
+                 , Str "Some"
+                 , Space
+                 , Str "Cars."
+                 ]
+             ])
+          [ ( AlignDefault , ColWidth 0.2714285714285714 )
+          , ( AlignDefault , ColWidth 0.18571428571428572 )
+          , ( AlignDefault , ColWidth 0.2 )
+          , ( AlignDefault , ColWidth 0.15714285714285714 )
+          , ( AlignDefault , ColWidth 0.18571428571428572 )
+          ]
+          (TableHead
+             ( "" , [] , [] )
+             [ Row
+                 ( "" , [] , [] )
+                 [ Cell
+                     ( "" , [] , [] )
+                     AlignDefault
+                     (RowSpan 1)
+                     (ColSpan 1)
+                     [ Plain [ Str "Car" , Space , Str "Model" ] ]
+                 , Cell
+                     ( "" , [] , [] )
+                     AlignDefault
+                     (RowSpan 1)
+                     (ColSpan 1)
+                     [ Plain [ Str "Engine" , Space , Str "Type" ] ]
+                 , Cell
+                     ( "" , [] , [] )
+                     AlignDefault
+                     (RowSpan 1)
+                     (ColSpan 1)
+                     [ Plain [ Str "Displacement" ] ]
+                 , Cell
+                     ( "" , [] , [] )
+                     AlignDefault
+                     (RowSpan 1)
+                     (ColSpan 1)
+                     [ Plain [ Str "Power(PS)" ] ]
+                 , Cell
+                     ( "" , [] , [] )
+                     AlignDefault
+                     (RowSpan 1)
+                     (ColSpan 1)
+                     [ Plain [ Str "Weight(KGs)" ] ]
+                 ]
+             ])
+          [ TableBody
+              ( "" , [] , [] )
+              (RowHeadColumns 0)
+              []
+              [ Row
+                  ( "" , [] , [] )
+                  [ Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "Mazda" , Space , Str "RX7" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "Twin" , Space , Str "Rotary" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "1.3L" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "280" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "1310" ] ]
+                  ]
+              , Row
+                  ( "" , [] , [] )
+                  [ Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "Ferrari" , Space , Str "F40" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "V-8" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "2.9L" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "478" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "1254" ] ]
+                  ]
+              , Row
+                  ( "" , [] , [] )
+                  [ Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain
+                          [ Str "Nissan"
+                          , Space
+                          , Str "Silvia"
+                          , Space
+                          , Str "S15"
+                          ]
+                      ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "Inline" , Space , Str "4" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "2.0L" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "240" ] ]
+                  , Cell
+                      ( "" , [] , [] )
+                      AlignDefault
+                      (RowSpan 1)
+                      (ColSpan 1)
+                      [ Plain [ Str "1300" ] ]
+                  ]
+              ]
+          ]
+          (TableFoot ( "" , [] , [] ) [])
+      ]
+  ]
+					</code></pre>
+          </section>
+        </section>
+        <!--Slide 3 : Lua Syntax -->
+        <section data-auto-animate>
+          <!--Slide 3.1 : Lua Syntax Reference -->
+          <section
+            data-background-iframe="https://hackage.haskell.org/package/pandoc-types-1.23.1/docs/Text-Pandoc-Definition.html"
+            data-background-interactive
+          >
+            <div
+              style="
+                position: absolute;
+                width: 40%;
+                right: -200px;
+                bottom: -500px;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5),
+                  0 5px 25px rgba(0, 0, 0, 0.2);
+                background-color: rgba(255, 255, 255, 0.9);
+                color: #000;
+                padding: 20px;
+                font-size: 20px;
+                text-align: left;
+              "
+            >
+              <h2>Pandoc Type Reference</h2>
+              <p class="fragment fade-up">
+                Official Documentation for pandoc AST Objects and its parameters.
+              </p>
+            </div>
+          </section>
+          <!--Slide 3.2 : Writing Lua Filters-->
+			<section data-auto-animate>
+				<h2>Things to know before writing Lua filters</h2>
+				<br/>
+				<ul>
+				  <li>Which Component to Target ?</li>
+				  <li>Which Attribute to Modify or Content to Replace ?</li>
+				  <li>Do you need to Change the type of Block/Inline ?</li>
+				  <li>How will you Identify the target attribute/Content to change ?</li>
+				  <li>Is this filter for a specific workflow(eg. Markdown -> HTML) ?</li>
+				</ul>
+			</section>
+		 <!-- Slide 3.3.1 : A Problem Statement-->
+		 <section>
+			<h2>Lets Design a Lua Filter</h2>
+			<br/>
+			<p>I want to include code directly from code files rather than copying it to the document.<br/> The Filter should work for any workflow, based on a command like <code>\includecode{Script.R}</code><br/>
+				I also want this filter to work for any conversion workflow.
+				<pre>
+					<code data-trim data-line-numbers>
+						\begin{verbatim}
+						\includecode{script.R}
+						\end{verbatim}
+					</code>
+				</pre>
+				<pre>
+					<code data-trim data-line-numbers>
+						```r
+						\includecode{script.R}
+						```
+					</code>
+				</pre>
+			</p>
+		 </section>
+          <!--Slide 3.3.2 : A simple Lua Filter -->
+		  <section data-auto-animate>
+            <h2 class="">A Lua Filter to Include Code Files</h2>
+            <pre>
+						<code data-trim data-line-numbers="1|3-9|11-18|19-21|22-29">
+-- A Pandoc Lua filter to read a file and include its contents as code in a code Block.
+
+function file_exists(file)
+  local f_obj = io.open(file, "rb")
+  if f_obj then 
+  	f_obj:close() 
+  end
+  return f_obj ~= nil
+end
+
+function read_lines(file)
+  if not file_exists(file) then return {} end
+  local lines = {}
+  for line in io.lines(file) do 
+    lines[#lines + 1] = line
+  end
+  return lines
+end
+--[[ 
+Target : CodeBlocks with specific command \includecode{}  
+]]
+function CodeBlock(block)
+	local code = pandoc.utils.stringify(block.text)
+	if code:match("\\includecode{(.-)}") then
+		s, e, file_name = string.find(code,"\\includecode{(.-)}")
+		block.text = table.concat(read_lines(file_name),"\n")
+	end
+	return block
+end
+
+						</code>
+					</pre>
+          </section>
+          <!--Slide 3.5 : Similarly Quarto API-->
+		  <section
+		  data-background-iframe="https://quarto.org/docs/extensions/lua-api.html"
+		  data-background-interactive
+		>
+		  <div
+			style="
+			  position: absolute;
+			  width: 40%;
+			  right: -200px;
+			  bottom: -500px;
+			  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5),
+				0 5px 25px rgba(0, 0, 0, 0.2);
+			  background-color: rgba(255, 255, 255, 0.9);
+			  color: #000;
+			  padding: 20px;
+			  font-size: 20px;
+			  text-align: left;
+			"
+		  >
+			<h2>Pandoc/Quarto API Reference</h2>
+			<p class="fragment fade-up">
+			  Use Quarto/Pandoc API to create professional Lua filters/Quarto Extensions.
+			</p>
+		  </div>
+		</section>  
+	
+		
+        </section>
+        <!--Slide 4 : Using Lua filters -->
+        <section>
+          <!--Slide 4.1 : Directly -->
+          <section>
+            <h2>Using Lua filters in CLI</h2>
+            <pre><code>pandoc -f markdown paper.md --lua-filter include_code_from_src.lua -t html5 -o paper.html</code></pre>
+            <dl>
+              <dt>-f (from)</dt>
+              <dd>Input format</dd>
+
+              <dt>--lua-filter</dt>
+              <dd> To include your Lua filter</dd>
+              
+              <dt>-t (to)</dt>
+              <dd>Output Format</dd>
+
+              <dt>-o (out)</dt>
+              <dd>Output file name</dd>
+
+              <dt>-s</dt>
+              <dd>Standalone Mode (will retain Metadata)</dd>
+            </dl>
+          </section>
+          <!--Slide 4.2 : In Rmarkdown/Quarto -->
+          <section>
+            <h2>Using Lua Filters directly in Quarto/Rmarkdown</h2>
+          <pre><code>
+---
+title: "A Sample Document"
+author: "Abhi-1U"
+date: "2024-04-24"
+output: 
+    rjtools::rjournal_web_article:
+        pandoc_args: ["--lua-filter=include_code_from_src.lua"]
+---
+          </code></pre>
+        </section>
+          <!--Slide 4.3 : using rmarkdown package -->
+          <section>
+            <H2>Using Lua Filters as options in <code>rmarkdown</code> package</H2>
+            <pre><code>
+pandoc_opt <- c("-s",
+                "--resource-path", file_path,
+                "--lua-filter", lua_filter_path)
+rmarkdown::pandoc_convert(input_file_path,
+                          from = "latex",
+                          to = "markdown",
+                          options = pandoc_opt,
+                          output = output_file_path,
+                          citeproc = TRUE,
+                          verbose = TRUE)
+            </code></pre>
+          </section>
+        </section>
+        <!--Slide 5 : Limitations -->
+        <section>
+          <!--Slide 5.1 : Reader superemacy -->
+          <section data-auto-animate>
+            <h2>Limitation 1: Reader Supremacy</h2>
+            <ul>
+              <li>If reader ignores/does not understand something, Lua Filter cannot do anything about it.</li>
+              <li>Reader will ignore most of the non-standard environments for example</li>
+              <pre data-id="code-animation"><code data-trim data-line-numbers>
+\begin{example}
+rmarkdown::pandoc_convert(input_file_path,
+                          from = "latex",
+                          to = "markdown",
+                          options = pandoc_opt,
+                          output = output_file_path,
+                          citeproc = TRUE,
+                          verbose = TRUE)
+\end{example}
+              </code></pre>
+            </ul>
+          </section>
+          <section data-auto-animate>
+            <h2>Limitation 1: Reader Supremacy</h2>
+            <ul>
+              <li>If reader ignores/does not understand something, Lua Filter cannot do anything about it.</li>
+              <li>Reader will ignore most of the non-standard environments for example</li>
+              <pre data-id="code-animation"><code data-trim data-line-numbers>
+\begin{verbatim}
+rmarkdown::pandoc_convert(input_file_path,
+                          from = "latex",
+                          to = "markdown",
+                          options = pandoc_opt,
+                          output = output_file_path,
+                          citeproc = TRUE,
+                          verbose = TRUE)
+\end{verbatim}
+              </code></pre>
+            </ul>
+          </section>
+          <!--Slide 5.2 : Inter Filter Communication -->
+          <section data-auto-animate>
+            <h2>Limitation 2: Hard To Coordinate between Multiple Filters</h2>
+            <ul>
+              <li>Example 1: You have one filter to correct Math Equation Labels,
+                but you also need to write one more filter to Correct Links/References.</li>
+            </ul>
+          </section>
+          <section data-auto-animate>
+            <h2>Limitation 2: Hard To Coordinate between Multiple Filters</h2>
+            <ul>
+              <li>Example 1: You have one filter to correct Math Equation Labels,
+                but you also need to write one more filter to Correct Links/References.</li>
+              <li>Problem : How do you coordinate between filters,like here which equation labels to correct.</li>
+            </ul>
+          </section>
+          <section data-auto-animate>
+            <h2>Limitation 2: Hard To Coordinate between Multiple Filters</h2>
+            <ul>
+              <li>Example 1: You have one filter to correct Math Equation Labels,
+                but you also need to write one more filter to Correct Links/References.</li>
+              <li>Problem : How do you coordinate between filters,like here which equation labels to correct.</li>
+              <li>
+                Solution : Message Passing by using intermediate text files to store list of equation labels.
+              </li>
+            </ul>
+          </section>
+          <section data-auto-animate>
+            <h2>Limitation 2: Hard To Coordinate between Multiple Filters</h2>
+            <ul>
+              <li>Example 1: You have one filter to correct Math Equation Labels,
+                but you also need to write one more filter to Correct Links/References.</li>
+              <li>Problem : How do you coordinate between filters,like here which equation labels to correct.</li>
+              <li>
+                Solution : Message Passing by using intermediate text files to store list of equation labels.
+              </li>
+              <li>
+                Alternate Solution : Store the equation labels in table variables and use walk functions to achieve similar result.
+              </li>
+            </ul>
+          </section>
+          <!-- Slide 5.3 Order of Filter Execution-->
+          <section data-auto-animate>
+            <h2> Order of Execution</h2>
+            <p> Lua filters will run in the order of execution as mentioned in the arguments of function call</p>
+            <pre data-id="code-animation"><code data-trim data-line-numbers>
+pandoc_opt <- c("-s",
+                "--lua-filter", "table_filter.lua",
+                "--lua-filter", "include_code_filter.lua",
+                "--lua-filter", "fix_reference_label.lua",
+                "--lua-filter", "fix_equation_label.lua")
+rmarkdown::pandoc_convert(input_file_path,
+                          from = "latex",
+                          to = "markdown",
+                          options = pandoc_opt,
+                          output = output_file_path,
+                          citeproc = TRUE,
+                          verbose = TRUE)
+            </code></pre>
+
+          </section>
+          <section data-auto-animate>
+            <h2> Order of Execution</h2>
+            <p> Lua filters will run in the order of execution as mentioned in the arguments of function call</p>
+            <pre data-id="code-animation"><code data-trim data-line-numbers>
+pandoc_opt <- c("-s",
+                "--lua-filter", "table_filter.lua",
+                "--lua-filter", "include_code_filter.lua",
+                "--lua-filter", "fix_equation_label.lua",
+                "--lua-filter", "fix_reference_label.lua")
+rmarkdown::pandoc_convert(input_file_path,
+                          from = "latex",
+                          to = "markdown",
+                          options = pandoc_opt,
+                          output = output_file_path,
+                          citeproc = TRUE,
+                          verbose = TRUE)
+            </code></pre>
+          </section>
+        </section>
+        <!--Slide 6 : Custom Pandoc Readers/Writers-->
+        <section>
+          <!--Slide 6.1 : What it is-->
+          <section>
+            <h2>Custom Pandoc Readers</h2>
+            <p>When you face a difficult situiation where the default pandoc Reader for some language does not yield the desired results.
+              Then we can write our own custom Reader to get the correct conversion. Using Parsing Expression Grammars (~CFG).
+            </p>
+            </section>
+            <section>
+            <h3>Application of Custom Readers to parse out sweave code chunks</h3>
+            Sweave(.Rnw) File Example
+            <pre><code data-trim data-line-numbers>
+\documentclass{article}
+\begin{document}
+
+This is all you need to do if you want to go back to the Sweave style:
+
+&lt;&lt;setup, include=FALSE>>=
+library(knitr)
+render_sweave()
+@
+
+The quick brown fox jumps over the lazy dog the quick brown fox jumps over the
+lazy dog the quick brown fox jumps over the lazy dog.
+
+&lt;&lt;test>>=
+1+1
+rnorm(30)
+@
+
+The quick brown fox jumps over the lazy dog the quick brown fox jumps over the
+lazy dog the quick brown fox jumps over the lazy dog.
+
+\end{document}
+            </code></pre>
+Isolated CodeBlocks as AST
+            <pre>
+              <code data-trim data-line-numbers>
+[ CodeBlock
+    ( "" , [] , [] )
+    "setup, include=FALSE>>=\nlibrary(knitr)\nrender_sweave()"
+, CodeBlock ( "" , [] , [] ) "test>>=\n1+1\nrnorm(30)"
+]
+              </code>
+            </pre>
+            </section>
+            <section>
+            <h3>The Custom Reader</h3>
+            <pre><code data-trim data-line-numbers>
+              -- For better performance we put these functions in local variables:
+              local P, S, R, Cf, Cc, Ct, V, Cs, Cg, Cb, B, C, Cmt =
+                lpeg.P, lpeg.S, lpeg.R, lpeg.Cf, lpeg.Cc, lpeg.Ct, lpeg.V,
+                lpeg.Cs, lpeg.Cg, lpeg.Cb, lpeg.B, lpeg.C, lpeg.Cmt
+              
+              local whitespacechar = S(" \t\r\n")
+              local wordchar = (1 - whitespacechar)
+              local spacechar = S(" \t")
+              local newline = P"\r"^-1 * P"\n"
+              local blankline = spacechar^0 * newline
+              local blanklines = newline * (spacechar^0 * newline)^1
+              local endline = newline - blanklines
+              
+              
+              -- Grammar
+              G = P{ "Pandoc",
+                Pandoc = Ct(V"Block"^0) / pandoc.Pandoc;
+                Block = blankline^0 * (V"CodeBlock" + V"Para") ;
+                Para = P(P(1) - P"<<")^1* newline^0;
+                CodeBlock = P"<<"
+                          * C((1- (newline * P'@'))^0)
+                          * newline
+                          * P'@'
+                          /pandoc.CodeBlock;
+              }
+              
+              function Reader(input)
+                return lpeg.match(G, tostring(input))
+              end
+            </code></pre>
+          </section>
+
+          <!--Slide 6.2 : When to use -->
+          <section>
+            <h2>When to use Custom Readers</h2>
+            <ul>
+              <li>When there is an custom format in the conversion.</li>
+              <li>When Lua Filters are ineffective.</li>
+              <li>If there is pre-processing required to convert.</li>
+            </ul>
+          </section>
+          <!--Slide 6.3 : How to write one -->
+          <section>
+            <h2>Further Reading/Resources.</h2>
+            <ul>
+              <li><a href="https://www.inf.puc-rio.br/~roberto/lpeg/">LPEG Reference</a></li>
+              <li><a href="https://pandoc.org/custom-readers.html">Pandoc Custom Reader Reference</a></li>
+              <li><a href="https://github.com/pandoc/lua-filters">Pandoc Lua Filter Examples</a></li>
+              <li><a href="https://hackage.haskell.org/package/pandoc-types-1.23.1/docs/Text-Pandoc-Definition.html">Pandoc Types Haskell Documentation</a></li>
+              <li><a href="https://quarto.org/docs/extensions/lua-api.html">Quarto Lua API reference</a></li>
+              <li><a href="https://github.com/Abhi-1U/texor-rjarticle/tree/master/supplement/lua-filters">A Supplementary Article from my Rjournal article</a></li>
+              <li><a href="https://github.com/Abhi-1U/texor/tree/master/inst">Lua filters used in texor package</a></li>
+            </ul>
+          </section>
+        </section>
+        <!--Slide 7 : Final Thoughts-->
+        <section>
+          <!-- Slide 7.1 : Browsing My collection of Lua Filters-->
+          <section
+		  data-background-iframe="https://github.com/Abhi-1U/texor/tree/master/inst"
+		  data-background-interactive
+		>
+		  <div
+			style="
+			  position: absolute;
+			  width: 40%;
+			  right: -200px;
+			  bottom: -500px;
+			  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5),
+				0 5px 25px rgba(0, 0, 0, 0.2);
+			  background-color: rgba(255, 255, 255, 0.9);
+			  color: #000;
+			  padding: 20px;
+			  font-size: 20px;
+			  text-align: left;
+			"
+		  >
+			<h2>texor package</h2>
+			<p class="fragment fade-up">
+        Lua Filters used in My Package
+			</p>
+		  </div>
+      </section>
+        <!-- Slide 7.3 : Demonstartions -->
+          <section>
+            <h1>Demonstartions </h1>
+          </section>
+          <!-- Slide 7.2 : Questions-->
+          <section>
+            <h1>Any Questions ?</h1>
+          </section>
+          <!-- Slide 7.4 : Thanks-->
+          <section>
+            <h1>Thanks</h1>
+            <br/>
+            <h3>Have a great day !</h3>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+    <script>
+      // More info about initialization & config:
+      // - https://revealjs.com/initialization/
+      // - https://revealjs.com/config/
+      Reveal.initialize({
+        hash: true,
+		slideNumber: true,
+        // Learn about plugins: https://revealjs.com/plugins/
+        plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+      });
+    </script>
+  </body>
+</html>
