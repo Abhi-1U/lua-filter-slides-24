@@ -1,0 +1,5 @@
+[ CodeBlock
+    ( "" , [] , [] )
+    "setup, include=FALSE>>=\nlibrary(knitr)\nrender_sweave()"
+, CodeBlock ( "" , [] , [] ) "test>>=\n1+1\nrnorm(30)"
+]

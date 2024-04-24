@@ -1,0 +1,29 @@
+<p>First document. This is a simple example, with no extra parameters or
+packages included.</p>
+<pre><code>-- A Pandoc Lua filter to read a file and include its contents as code in a code Block.
+
+function file_exists(file)
+  local f_obj = io.open(file, &quot;rb&quot;)
+  if f_obj then 
+  	f_obj:close() 
+  end
+  return f_obj ~= nil
+end
+
+function read_lines(file)
+  if not file_exists(file) then return {} end
+  local lines = {}
+  for line in io.lines(file) do 
+    lines[#lines + 1] = line
+  end
+  return lines
+end
+
+function CodeBlock(block)
+	local code = pandoc.utils.stringify(block.text)
+	if code:match(&quot;\\includecode{(.-)}&quot;) then
+		s, e, file_name = string.find(code,&quot;\\includecode{(.-)}&quot;)
+		block.text = table.concat(read_lines(file_name),&quot;\n&quot;)
+	end
+	return block
+end</code></pre>
